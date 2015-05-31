@@ -155,7 +155,6 @@ fi
 cat > "$conf" <<EOF
 server $(getroute $OVPN_SERVER)
 verb 3
-#duplicate-cn
 key $EASYRSA_PKI/private/${OVPN_CN}.key
 ca $EASYRSA_PKI/ca.crt
 cert $EASYRSA_PKI/issued/${OVPN_CN}.crt
@@ -177,6 +176,7 @@ client-config-dir $OPENVPN/ccd
 user nobody
 group nogroup
 EOF
+
 
 [ -n "$OVPN_CLIENT_TO_CLIENT" ] && echo "client-to-client" >> "$conf"
 [ "$OVPN_DNS" == "1" ] && echo push "dhcp-option DNS 8.8.4.4" >> "$conf"

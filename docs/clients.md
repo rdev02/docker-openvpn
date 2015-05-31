@@ -1,6 +1,6 @@
-# Advanced client management
+# Advanced Client Management
 
-## Client configuration mode
+## Client Configuration Mode
 
 The [`ovpn_getclient`](/bin/ovpn_getclient) can produce two different versions of the configuration.
 
@@ -9,13 +9,13 @@ The [`ovpn_getclient`](/bin/ovpn_getclient) can produce two different versions o
 
 Note that some client software might be picky about which configuration format it accepts.
 
-## Batch mode
+## Batch Mode
 
 If you have more than a few clients, you will want to generate and update your client configuration in batch. For this task the script [`ovpn_getclient_all`](/bin/ovpn_getclient_all) was written, which writes out the configuration for each client to a separate directory called `clients/$cn`.
 
 Execute the following to generate the configuration for all clients:
 
-    docker run --rm -t -i -v /tmp/openvpn:/etc/openvpn kylemanna/openvpn ovpn_getclient_all
+    docker run --rm -it -v /tmp/openvpn:/etc/openvpn kylemanna/openvpn ovpn_getclient_all
 
 After doing so, you will find the following files in each of the `$cn` directories:
 
@@ -26,3 +26,12 @@ After doing so, you will find the following files in each of the `$cn` directori
     $cn.crt
     $cn.key
     ta.key
+
+## Revoking Client Certificates
+
+Revoke `client1`'s certificate and generate the certificate revocation list (CRL):
+
+    docker run --rm -it --volumes-from $OVPN_DATA kylemanna/openvpn easyrsa revoke client1
+    docker run --rm -it --volumes-from $OVPN_DATA kylemanna/openvpn easyrsa gen-crl
+
+The OpenVPN server will read this change everytime a client connects (no need to restart server) and deny clients access using revoked certificates.

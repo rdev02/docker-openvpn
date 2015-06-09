@@ -1,52 +1,37 @@
+### **Original credit: https://github.com/kylemanna/docker-openvpn**
 # OpenVPN for Docker
 
 OpenVPN server in a Docker container complete with an EasyRSA PKI CA.
-
-Extensively tested on [Digital Ocean $5/mo node](http://bit.ly/1C7cKr3) and has
-a corresponding [Digital Ocean Community Tutorial](http://bit.ly/1AGUZkq).
-
-Upstream links:
-
-* Docker Registry @ [kylemanna/openvpn](https://registry.hub.docker.com/u/kylemanna/openvpn)
-* GitHub @ [kylemanna/docker-openvpn](https://github.com/kylemanna/docker-openvpn)
+This fork contains changes necessary to generate config and run another instance of vpn on tcp
 
 ## Quick Start
 
-* Create the `$OVPN_DATA` volume container, i.e. `OVPN_DATA="ovpn-data"`
+* Create the the keys and clients: run this on a machine you trust
 
-        docker run --name $OVPN_DATA -v /etc/openvpn busybox
+        1. docker run --rm -it -v ~/openvpn_udp:/etc/openvpn rdev02/docker-openvpn ovpn_genconfig -u udp://yourserver.com
+        2. docker run --rm -it -v ~/openvpn_udp:/etc/openvpn rdev02/docker-openvpn ovpn_initpki
+        3. docker run --rm -it -v ~/openvpn_udp:/etc/openvpn rdev02/docker-openvpn ovpn_copy_server_files
+        4. docker run --rm -it -v ~/openvpn_udp:/etc/openvpn rdev02/docker-openvpn easyrsa build-client-full my_client_name nopass
+        5. docker run --rm -it -v ~/openvpn_udp:/etc/openvpn rdev02/docker-openvpn ovpn_getclient my_client_name > my_client_name_udp.ovpn        
+  Repeat steps 4-5 for any number of clients you have. in the folder that you executed this you will have client ovpn files which you can use to connect to the server. In the ~/openvpn_udp folder
+  you will have all the configuration, which, at this point, you can back up.
 
-* Initialize the `$OVPN_DATA` container that will hold the configuration files and certificates
+* Copy client generated certs to server config 
 
-        docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn ovpn_genconfig -u udp://VPN.SERVERNAME.COM
-        docker run --volumes-from $OVPN_DATA --rm -it kylemanna/openvpn ovpn_initpki
+        cp ~/openvpn_udp/pki/issued/* ~/openvpn_udp/server/pki/issued
+        cp ~/openvpn_udp/pki/private/* ~/openvpn_udp/server/pki/private
 
-* Start OpenVPN server process
+* Copy ~/openvpn_udp/server to the server, where open vpn will be running
+* Run open vpn(suppose you copied server files to /etc/openvpn_udp)
 
-    - On Docker [version 1.2](http://blog.docker.com/2014/08/announcing-docker-1-2-0/) and newer
+        docker run -v /etc/openvpn_udp:/etc/openvpn -d -p 1194:1194/udp --cap-add=NET_ADMIN rdev02/docker-openvpn
 
-            docker run --volumes-from $OVPN_DATA -d -p 1194:1194/udp --cap-add=NET_ADMIN kylemanna/openvpn
-
-    - On Docker older than version 1.2
-
-            docker run --volumes-from $OVPN_DATA -d -p 1194:1194/udp --privileged kylemanna/openvpn
-
-* Generate a client certificate without a passphrase
-
-        docker run --volumes-from $OVPN_DATA --rm -it kylemanna/openvpn easyrsa build-client-full CLIENTNAME nopass
-
-* Retrieve the client configuration with embedded certificates
-
-        docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn ovpn_getclient CLIENTNAME > CLIENTNAME.ovpn
-
-* Create an environment variable with the name DEBUG and value of 1 to enable debug output (using "docker -e").
-
-        for example - docker run --volumes-from $OVPN_DATA -d -p 1194:1194/udp --privileged -e DEBUG=1 kylemanna/openvpn
+* Now you can connect with your client
+* Repeat all the above changing 'udp' to 'tcp'. Don't forget to specify port in your tcp vpn server url.
 
 ## How Does It Work?
 
-Initialize the volume container using the `kylemanna/openvpn` image with the
-included scripts to automatically generate:
+Automatically generate:
 
 - Diffie-Hellman parameters
 - a private key
@@ -58,14 +43,14 @@ The OpenVPN server is started with the default run cmd of `ovpn_run`
 
 The configuration is located in `/etc/openvpn`, and the Dockerfile
 declares that directory as a volume. It means that you can start another
-container with the `--volumes-from` flag, and access the configuration.
+container with the `-v` flag, and access different set of configuration(tcp).
 The volume also holds the PKI keys and certs so that it could be backed up.
 
-To generate a client certificate, `kylemanna/openvpn` uses EasyRSA via the
+To generate a client certificate, `rdev02/docker-openvpn` uses EasyRSA via the
 `easyrsa` command in the container's path.  The `EASYRSA_*` environmental
 variables place the PKI CA under `/etc/opevpn/pki`.
 
-Conveniently, `kylemanna/openvpn` comes with a script called `ovpn_getclient`,
+Conveniently, `rdev02/docker-openvpn` comes with a script called `ovpn_getclient`,
 which dumps an inline OpenVPN client configuration file.  This single file can
 then be given to a client for access to the VPN.
 
@@ -144,13 +129,11 @@ take away is that it certainly makes it more difficult to break out of the
 container.  People are actively working on Linux containers to make this more
 of a guarantee in the future.
 
-## Differences from jpetazzo/dockvpn
+## Differences from kylemanna/docker-openvpn
 
-* No longer uses serveconfig to distribute the configuration via https
-* Proper PKI support integrated into image
-* OpenVPN config files, PKI keys and certs are stored on a storage
-  volume for re-use across containers
-* Addition of tls-auth for HMAC security
+* expose port 443/tcp
+* fix the bug where tcp port was not written to configuration properly
+* move away from data containers to mounted volumes
 
 ## Tested On
 

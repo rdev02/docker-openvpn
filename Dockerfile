@@ -1,6 +1,5 @@
 # Original credit: https://github.com/kylemanna/docker-openvpn
 
-# Leaner build then Ubunutu
 FROM debian:jessie
 
 MAINTAINER rdev02 <rdev02@outlook.com>

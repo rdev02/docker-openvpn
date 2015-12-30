@@ -4,6 +4,14 @@
 OpenVPN server in a Docker container complete with an EasyRSA PKI CA.
 This fork contains changes necessary to generate config and run another instance of vpn on tcp
 
+Extensively tested on [Digital Ocean $5/mo node](http://bit.ly/1C7cKr3) and has
+a corresponding [Digital Ocean Community Tutorial](http://bit.ly/1AGUZkq).
+
+Upstream links:
+
+* Docker Registry @ [rdev02/docker-openvpn](https://hub.docker.com/r/rdev02/docker-openvpn/)
+* GitHub @ [rdev02/docker-openvpn](https://github.com/rdev02/docker-openvpn)
+
 ## Quick Start
 
 * Create the the keys and clients: run this on a machine you trust
@@ -90,13 +98,13 @@ packets, etc).
   simplicity.  It's highly recommended to secure the CA key with some
   passphrase to protect against a filesystem compromise.  A more secure system
   would put the EasyRSA PKI CA on an offline system (can use the same Docker
-  image and the script [`ovpn_copy_server_files`](/docs/clients.md) to accomplish this).
+  image and the script [`ovpn_copy_server_files`](/docs/paranoid.md) to accomplish this).
 * It would be impossible for an adversary to sign bad or forged certificates
   without first cracking the key's passphase should the adversary have root
   access to the filesystem.
 * The EasyRSA `build-client-full` command will generate and leave keys on the
   server, again possible to compromise and steal the keys.  The keys generated
-  need to signed by the CA which the user hopefully configured with a passphrase
+  need to be signed by the CA which the user hopefully configured with a passphrase
   as described above.
 * Assuming the rest of the Docker container's filesystem is secure, TLS + PKI
   security should prevent any malicious host from using the VPN.
@@ -115,7 +123,7 @@ OpenVPN with latest OpenSSL on Ubuntu 12.04 LTS).
 ### It Doesn't Stomp All Over the Server's Filesystem
 
 Everything for the Docker container is contained in two images: the ephemeral
-run time image (kylemanna/openvpn) and the data image (using busybox as a
+run time image (rdev02/docker-openvpn) and the data image (using busybox as a
 base).  To remove it, remove the two Docker images and corresponding containers
 and it's all gone.  This also makes it easier to run multiple servers since
 each lives in the bubble of the container (of course multiple IPs or separate
@@ -129,11 +137,13 @@ take away is that it certainly makes it more difficult to break out of the
 container.  People are actively working on Linux containers to make this more
 of a guarantee in the future.
 
-## Differences from kylemanna/docker-openvpn
+## Differences from jpetazzo/dockvpn
 
-* expose port 443/tcp
-* fix the bug where tcp port was not written to configuration properly
-* move away from data containers to mounted volumes
+* No longer uses serveconfig to distribute the configuration via https
+* Proper PKI support integrated into image
+* OpenVPN config files, PKI keys and certs are stored on a storage
+  volume for re-use across containers
+* Addition of tls-auth for HMAC security
 
 ## Tested On
 
